@@ -65,16 +65,16 @@ global class AccountOpportunityService {
 
 @IsTest
 public class AccountOpportunityServiceTest {
-    
+
     @IsTest
     static void testUpdateOpportunityName() {
         // Create test data
         Account testAccount = new Account(Name = 'Test Account');
         Insert testAccount;
-        
+
         Opportunity testOpp = new Opportunity(Name = 'Test Opp', StageName = 'Prospecting', CloseDate = Date.today(), AccountId = testAccount.Id);
         Insert testOpp;
-        
+
         // Set up test request
         RestRequest req = new RestRequest();
         req.requestURI = '/services/apexrest/AccountOpportunity';
@@ -82,49 +82,161 @@ public class AccountOpportunityServiceTest {
         req.addHeader('accountId', testAccount.Id); // Set the custom header
         req.addParameter('opportunityId', testOpp.Id);
         req.addParameter('newName', 'Updated Opp Name');
-        
+
         RestContext.request = req;
-        
+
         // Associate the mock implementation with the HTTP callout
         Test.setMock(HttpCalloutMock.class, new MockAccountOpportunityService());
-        
+
         // call method and verify result 
         String result = AccountOpportunityService.updateOpportunityName();
         System.assertEquals('Opportunity name updated successfully', result);
-        
+
         // Verify that the opportunity name was updated in the database
         Opportunity updatedOpp = [SELECT Name FROM Opportunity WHERE Id = :testOpp.Id];
         System.assertEquals('Updated Opp Name', updatedOpp.Name);
     }
-    
+
     @IsTest
     static void testGetOpportunity() {
         // Create test data
         Account testAccount = new Account(Name = 'Test Account');
         Insert testAccount;
-        
+
         Opportunity testOpp = new Opportunity(Name = 'Test Opp', StageName = 'Prospecting', CloseDate = Date.today(), AccountId = testAccount.Id);
         Insert testOpp;
-        
+
         // Set up test request
         RestRequest req = new RestRequest();
         req.requestURI = '/services/apexrest/AccountOpportunity';
         req.httpMethod = 'GET';
         req.addParameter('accountId', testAccount.Id); // Use addParameter to pass accountId
-        
+
         RestContext.request = req;
-        
+
         // Associate the mock implementation with the HTTP callout
         Test.setMock(HttpCalloutMock.class, new MockAccountOpportunityService());
-        
+
         // call method and verify result 
         Opportunity result = AccountOpportunityService.getOpportunity();
-        
+
         // Verify that the opportunity returned is not null
         System.assertNotEquals(null, result);
-        
+
         // Verify that the opportunity ID matches the testOpp ID
         System.assertEquals(testOpp.Id, result.Id);
+    }
+
+    @IsTest
+    static void testUpdateOpportunityName_Error_OpportunityNotFound() {
+        // Set up test request without opportunityId parameter
+        RestRequest req = new RestRequest();
+        req.requestURI = '/services/apexrest/AccountOpportunity';
+        req.httpMethod = 'POST';
+        req.addHeader('accountId', 'SomeAccountId'); // Set the custom header
+        req.addParameter('newName', 'Updated Opp Name');
+
+        RestContext.request = req;
+
+        // Associate the mock implementation with the HTTP callout
+        Test.setMock(HttpCalloutMock.class, new MockAccountOpportunityService());
+
+        // call method and verify result 
+        try {
+            String result = AccountOpportunityService.updateOpportunityName();
+            System.assert(false, 'Expected exception was not thrown.');
+        } catch (AccountOpportunityService.AccountOpportunityServiceException e) {
+            System.assertEquals('Missing required parameter: opportunityId', e.getMessage());
+        }
+    }
+
+    @IsTest
+    static void testGetOpportunity_Error_OpportunityNotFound() {
+        // Set up test request without accountId parameter
+        RestRequest req = new RestRequest();
+        req.requestURI = '/services/apexrest/AccountOpportunity';
+        req.httpMethod = 'GET';
+
+        RestContext.request = req;
+
+        // Associate the mock implementation with the HTTP callout
+        Test.setMock(HttpCalloutMock.class, new MockAccountOpportunityService());
+
+        // call method and verify result 
+        try {
+            Opportunity result = AccountOpportunityService.getOpportunity();
+            System.assert(false, 'Expected exception was not thrown.');
+        } catch (AccountOpportunityService.AccountOpportunityServiceException e) {
+            System.assertEquals('Missing required parameter: accountId', e.getMessage());
+        }
+    }
+      @IsTest
+    static void testUpdateOpportunityName_Error_MissingNewNameParameter() {
+        // Set up test request without newName parameter
+        RestRequest req = new RestRequest();
+        req.requestURI = '/services/apexrest/AccountOpportunity';
+        req.httpMethod = 'POST';
+        req.addHeader('accountId', 'SomeAccountId'); // Set the custom header
+        req.addParameter('opportunityId', 'SomeOpportunityId');
+
+        RestContext.request = req;
+
+        // Associate the mock implementation with the HTTP callout
+        Test.setMock(HttpCalloutMock.class, new MockAccountOpportunityService());
+
+        // call method and verify result 
+        try {
+            String result = AccountOpportunityService.updateOpportunityName();
+            System.assert(false, 'Expected exception was not thrown.');
+        } catch (AccountOpportunityService.AccountOpportunityServiceException e) {
+            System.assertEquals('Missing required parameter: newName', e.getMessage());
+        }
+    }
+
+    @IsTest
+    static void testGetOpportunity_Error_InvalidAccountId() {
+        // Set up test request with an invalid accountId
+        RestRequest req = new RestRequest();
+        req.requestURI = '/services/apexrest/AccountOpportunity';
+        req.httpMethod = 'GET';
+        req.addParameter('accountId', 'InvalidAccountId'); // Use an invalid AccountId
+
+        RestContext.request = req;
+
+        // Associate the mock implementation with the HTTP callout
+        Test.setMock(HttpCalloutMock.class, new MockAccountOpportunityService());
+
+        // call method and verify result 
+        try {
+            Opportunity result = AccountOpportunityService.getOpportunity();
+            System.assert(false, 'Expected exception was not thrown.');
+        } catch (AccountOpportunityService.AccountOpportunityServiceException e) {
+            System.assertEquals('An error occurred while retrieving the opportunity: System.QueryException: List has no rows for assignment to SObject', e.getMessage());
+        }
+    }
+
+    @IsTest
+    static void testUpdateOpportunityName_Error_InvalidOpportunityId() {
+        // Set up test request with an invalid opportunityId
+        RestRequest req = new RestRequest();
+        req.requestURI = '/services/apexrest/AccountOpportunity';
+        req.httpMethod = 'POST';
+        req.addHeader('accountId', 'SomeAccountId'); // Set the custom header
+        req.addParameter('opportunityId', 'InvalidOpportunityId'); // Use an invalid OpportunityId
+        req.addParameter('newName', 'Updated Opp Name');
+
+        RestContext.request = req;
+
+        // Associate the mock implementation with the HTTP callout
+        Test.setMock(HttpCalloutMock.class, new MockAccountOpportunityService());
+
+        // call method and verify result 
+        try {
+            String result = AccountOpportunityService.updateOpportunityName();
+            System.assert(false, 'Expected exception was not thrown.');
+        } catch (AccountOpportunityService.AccountOpportunityServiceException e) {
+            System.assertEquals('No opportunity found with the specified ID', e.getMessage());
+        }
     }
 }
 
